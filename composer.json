@@ -1,0 +1,18 @@
+{
+	"name": "schnitzler/instagram-importer",
+	"type": "typo3-cms-extension",
+	"description": "A TYPO3 extension that imports data from instagram",
+	"keywords": [
+		"TYPO3",
+		"Instagram"
+	],
+	"autoload": {
+		"psr-4": {
+			"Schnitzler\\InstagramImporter\\": "Classes/"
+		}
+	},
+	"replace": {
+		"instagram_importer": "self.version",
+		"typo3-ter/instagram_importer": "self.version"
+	}
+}
