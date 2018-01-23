@@ -14,5 +14,8 @@
 	"replace": {
 		"instagram_importer": "self.version",
 		"typo3-ter/instagram_importer": "self.version"
+	},
+	"require": {
+		"guzzlehttp/guzzle": "^6.3"
 	}
 }

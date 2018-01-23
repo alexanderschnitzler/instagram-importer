@@ -2,7 +2,7 @@
 namespace Schnitzler\InstagramImporter\Tasks;
 
 use Schnitzler\InstagramImporter\Importer;
-use TYPO3\CMS\Core\Database\ConnectionPool;
+use TYPO3\CMS\Core\Database\DatabaseConnection;
 use TYPO3\CMS\Core\Log\LogManager;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Scheduler\Task\AbstractTask;
@@ -17,17 +17,17 @@ class ImportTask extends AbstractTask
      */
     public function execute()
     {
-        $logger = GeneralUtility::makeInstance(LogManager::class)->getLogger(__CLASS__);
+        /** @var LogManager $logManager */
+        $logManager = GeneralUtility::makeInstance(LogManager::class);
+        $logger = $logManager->getLogger(__CLASS__);
 
         $tableName = 'tx_instagramimporter_domain_model_accesstoken';
 
-        $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)
-            ->getConnectionForTable($tableName)
-            ->createQueryBuilder();
-        $queryBuilder->getRestrictions()->removeAll();
-
-        $query = $queryBuilder->select('*')->from($tableName);
-        $rows = $query->execute()->fetchAll();
+        $rows = (array)$this->getDatabaseConnection()->exec_SELECTgetRows(
+            '*',
+            $tableName,
+            ''
+        );
 
         $importer = GeneralUtility::makeInstance(Importer::class, $logger);
         foreach ($rows as $row) {
@@ -36,5 +36,13 @@ class ImportTask extends AbstractTask
         }
 
         return true;
+    }
+
+    /**
+     * @return DatabaseConnection
+     */
+    public function getDatabaseConnection(): DatabaseConnection
+    {
+        return $GLOBALS['TYPO3_DB'];
     }
 }

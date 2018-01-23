@@ -49,7 +49,7 @@ CREATE TABLE tx_instagramimporter_domain_model_post (
 --
 --  Table structure for table 'tx_instagramimporter_domain_model_tag'
 --
-CREATE TABLE 'tx_instagramimporter_domain_model_tag' (
+CREATE TABLE tx_instagramimporter_domain_model_tag (
 	uid int(11) unsigned NOT NULL auto_increment,
 	pid int(11) unsigned DEFAULT '0' NOT NULL,
 	tstamp int(11) unsigned DEFAULT '0' NOT NULL,
@@ -65,7 +65,7 @@ CREATE TABLE 'tx_instagramimporter_domain_model_tag' (
 --
 --  Table structure for table 'tx_instagramimporter_domain_model_image'
 --
-CREATE TABLE 'tx_instagramimporter_domain_model_image' (
+CREATE TABLE tx_instagramimporter_domain_model_image (
 	uid int(11) unsigned NOT NULL auto_increment,
 	pid int(11) unsigned DEFAULT '0' NOT NULL,
 	tstamp int(11) unsigned DEFAULT '0' NOT NULL,
@@ -86,7 +86,7 @@ CREATE TABLE 'tx_instagramimporter_domain_model_image' (
 --
 --  Table structure for table 'tx_instagramimporter_domain_model_comment'
 --
-CREATE TABLE 'tx_instagramimporter_domain_model_comment' (
+CREATE TABLE tx_instagramimporter_domain_model_comment (
 	uid int(11) unsigned NOT NULL auto_increment,
 	pid int(11) unsigned DEFAULT '0' NOT NULL,
 	tstamp int(11) unsigned DEFAULT '0' NOT NULL,
@@ -103,7 +103,7 @@ CREATE TABLE 'tx_instagramimporter_domain_model_comment' (
 --
 --  Table structure for table 'tx_instagramimporter_domain_model_location'
 --
-CREATE TABLE 'tx_instagramimporter_domain_model_location' (
+CREATE TABLE tx_instagramimporter_domain_model_location (
 	uid int(11) unsigned NOT NULL auto_increment,
 	pid int(11) unsigned DEFAULT '0' NOT NULL,
 	tstamp int(11) unsigned DEFAULT '0' NOT NULL,
@@ -123,7 +123,7 @@ CREATE TABLE 'tx_instagramimporter_domain_model_location' (
 --
 --  Table structure for table 'tx_instagramimporter_domain_model_user'
 --
-CREATE TABLE 'tx_instagramimporter_domain_model_user' (
+CREATE TABLE tx_instagramimporter_domain_model_user (
 	uid int(11) unsigned NOT NULL auto_increment,
 	pid int(11) unsigned DEFAULT '0' NOT NULL,
 	tstamp int(11) unsigned DEFAULT '0' NOT NULL,
@@ -143,7 +143,7 @@ CREATE TABLE 'tx_instagramimporter_domain_model_user' (
 --
 --  Table structure for table 'tx_instagramimporter_domain_model_post_tag'
 --
-CREATE TABLE 'tx_instagramimporter_domain_model_post_tag' (
+CREATE TABLE tx_instagramimporter_domain_model_post_tag (
 	uid_local int(11) unsigned DEFAULT '0' NOT NULL,
 	uid_foreign int(11) unsigned DEFAULT '0' NOT NULL,
 	sorting int(11) unsigned DEFAULT '0' NOT NULL,

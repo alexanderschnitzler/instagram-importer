@@ -1,10 +1,10 @@
 <?php
 namespace Schnitzler\InstagramImporter;
 
+use GuzzleHttp\Client;
 use Psr\Log\LoggerInterface;
-use TYPO3\CMS\Core\Database\ConnectionPool;
+use TYPO3\CMS\Core\Database\DatabaseConnection;
 use TYPO3\CMS\Core\DataHandling\DataHandler;
-use TYPO3\CMS\Core\Http\RequestFactory;
 use TYPO3\CMS\Core\Http\Uri;
 use TYPO3\CMS\Core\Utility\ArrayUtility;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
@@ -26,28 +26,25 @@ class Importer
     private $logger;
 
     /**
-     * @var ConnectionPool
+     * @param LoggerInterface $logger
      */
-    private $connectionPool;
-
     public function __construct(LoggerInterface $logger)
     {
         $this->logger = $logger;
-        $this->connectionPool = GeneralUtility::makeInstance(ConnectionPool::class);
     }
 
     /**
+     * @param string $accessToken
      * @return bool
      */
-    public function import(string $accessToken)
+    public function import(string $accessToken): bool
     {
         // @todo: Put this code into a Client class or so
         $uri = new Uri('https://api.instagram.com/v1/users/self/media/recent');
-        $uri = $uri->withQuery('access_token=' . $accessToken);
+        $uri = $uri->withQuery('access_token=' . $accessToken . '&count=200');
 
-        /** @var RequestFactory $requestFactory */
-        $requestFactory = GeneralUtility::makeInstance(RequestFactory::class);
-        $response = $requestFactory->request($uri);
+        $client = new Client();
+        $response = $client->get($uri);
 
         if ($response->getStatusCode() !== 200) {
             throw new \RuntimeException(
@@ -65,23 +62,15 @@ class Importer
 //        $jsonFile = \TYPO3\CMS\Core\Utility\ExtensionManagementUtility::extPath('instagram_importer', 'foo.json');
 //        $content = json_decode(file_get_contents($jsonFile), true);
 
-        $queryBuilder = $this->connectionPool
-            ->getConnectionForTable(static::TABLE_POST)
-            ->createQueryBuilder();
-        $queryBuilder->getRestrictions()->removeAll();
-
         /** @var array|array[] $content */
         foreach ($content['data'] as $post) {
-            $query = $queryBuilder->count('*')
-                ->from(static::TABLE_POST)
-                ->where(
-                    $queryBuilder->expr()->eq(
-                        'id',
-                        $queryBuilder->quote($post['id'], \PDO::PARAM_STR)
-                    )
-                );
+            $count = (int)$this->getDatabaseConnection()->exec_SELECTcountRows(
+                '*',
+                static::TABLE_POST,
+                'id = ' . (int)$post['id']
+            );
 
-            if ((int)$query->execute()->fetchColumn() === 1) {
+            if ($count === 1) {
                 $this->logger->debug('Skip creation of post record as it already exists');
                 continue;
             }
@@ -114,9 +103,12 @@ class Importer
                 ArrayUtility::mergeRecursiveWithOverrule($data, $this->fetchTagData($uid, $post['tags']));
             }
 
+            $backendUser = clone $GLOBALS['BE_USER'];
+            $backendUser->user['admin'] = 1;
+
             /** @var DataHandler $dataHandler */
             $dataHandler = GeneralUtility::makeInstance(DataHandler::class);
-            $dataHandler->start($data, []);
+            $dataHandler->start($data, [], $backendUser);
             $dataHandler->process_datamap();
 
             if (count($dataHandler->errorLog) > 0) {
@@ -139,21 +131,16 @@ class Importer
     private function fetchUserData(string $postId, array $user)
     {
         $data = [];
-        $queryBuilder = $this->connectionPool
-            ->getConnectionForTable(static::TABLE_USER)
-            ->createQueryBuilder();
-        $queryBuilder->getRestrictions()->removeAll();
 
-        $query = $queryBuilder->select('uid')
-            ->from(static::TABLE_USER)
-            ->where(
-                $queryBuilder->expr()->eq(
-                    'id',
-                    $queryBuilder->quote($user['id'], \PDO::PARAM_STR)
-                )
-            );
+        $row = $this->getDatabaseConnection()->exec_SELECTgetSingleRow(
+            'uid',
+            static::TABLE_USER,
+            'id = ' . (int)$user['id']
+        );
 
-        if (($userUid = (int)$query->execute()->fetchColumn()) === 0) {
+        if (is_array($row) && isset($row['uid'])) {
+            $data[static::TABLE_POST][$postId]['user'] = (int)$row['uid'];
+        } else {
             $userUid = uniqid('NEW', true);
             $data[static::TABLE_USER][$userUid] = [
                 'pid'             => 0,
@@ -162,8 +149,8 @@ class Importer
                 'profile_picture' => $user['profile_picture'],
                 'username'        => $user['username']
             ];
+            $data[static::TABLE_POST][$postId]['user'] = $userUid;
         }
-        $data[static::TABLE_POST][$postId]['user'] = $userUid;
 
         return $data;
     }
@@ -176,21 +163,16 @@ class Importer
     private function fetchLocationData(string $postId, array $location)
     {
         $data = [];
-        $queryBuilder = $this->connectionPool
-            ->getConnectionForTable(static::TABLE_USER)
-            ->createQueryBuilder();
-        $queryBuilder->getRestrictions()->removeAll();
 
-        $query = $queryBuilder->select('uid')
-            ->from(static::TABLE_LOCATION)
-            ->where(
-                $queryBuilder->expr()->eq(
-                    'id',
-                    $queryBuilder->quote($location['id'], \PDO::PARAM_STR)
-                )
-            );
+        $row = $this->getDatabaseConnection()->exec_SELECTgetSingleRow(
+            'uid',
+            static::TABLE_LOCATION,
+            'id = ' . (int)$location['id']
+        );
 
-        if (($locationUid = (int)$query->execute()->fetchColumn()) === 0) {
+        if (is_array($row) && isset($row['uid'])) {
+            $data[static::TABLE_POST][$postId]['location'] = (int)$row['uid'];
+        } else {
             $locationUid = uniqid('NEW', true);
             $data[static::TABLE_LOCATION][$locationUid] = [
                 'pid'       => 0,
@@ -199,8 +181,8 @@ class Importer
                 'latitude'  => $location['latitude'],
                 'longitude' => $location['longitude']
             ];
+            $data[static::TABLE_POST][$postId]['location'] = $locationUid;
         }
-        $data[static::TABLE_POST][$postId]['location'] = $locationUid;
 
         return $data;
     }
@@ -213,31 +195,24 @@ class Importer
     public function fetchTagData(string $postId, array $tags)
     {
         $data = [];
-        $queryBuilder = $this->connectionPool
-            ->getConnectionForTable(static::TABLE_TAG)
-            ->createQueryBuilder();
-        $queryBuilder->getRestrictions()->removeAll();
-
         $uids = [];
         foreach ($tags as $tag) {
-            $query = $queryBuilder->select('uid')
-                ->from(static::TABLE_TAG)
-                ->where(
-                    $queryBuilder->expr()->eq(
-                        'name',
-                        $queryBuilder->quote($tag, \PDO::PARAM_STR)
-                    )
-                );
+            $row = $this->getDatabaseConnection()->exec_SELECTgetSingleRow(
+                'uid',
+                static::TABLE_TAG,
+                'name = "' . $this->getDatabaseConnection()->quoteStr($tag, static::TABLE_TAG) . '"'
+            );
 
-            if (($tagUid = (int)$query->execute()->fetchColumn()) === 0) {
+            if (is_array($row) && isset($row['uid'])) {
+                $uids[] = (int)$row['uid'];
+            } else {
                 $tagUid = uniqid('NEW', true);
                 $data[static::TABLE_TAG][$tagUid] = [
                     'pid'  => 0,
                     'name' => $tag
                 ];
+                $uids[] = $tagUid;
             }
-
-            $uids[] = $tagUid;
         }
 
         $data[static::TABLE_POST][$postId]['tags'] = implode(',', $uids);
@@ -253,11 +228,6 @@ class Importer
     public function fetchImageData(string $postId, array $images)
     {
         $data = [];
-        $queryBuilder = $this->connectionPool
-            ->getConnectionForTable(static::TABLE_IMAGE)
-            ->createQueryBuilder();
-        $queryBuilder->getRestrictions()->removeAll();
-
         $uids = [];
         foreach ($images as $name => $image) {
             $uid = uniqid('NEW', true);
@@ -275,5 +245,13 @@ class Importer
         $data[static::TABLE_POST][$postId]['images'] = implode(',', $uids);
 
         return $data;
+    }
+
+    /**
+     * @return DatabaseConnection
+     */
+    public function getDatabaseConnection(): DatabaseConnection
+    {
+        return $GLOBALS['TYPO3_DB'];
     }
 }

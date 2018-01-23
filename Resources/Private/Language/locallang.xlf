@@ -3,6 +3,13 @@
 	<file source-language="en" datatype="plaintext" original="messages" product-name="instagram_importer">
 		<header/>
 		<body>
+			<trans-unit id="task.title">
+				<source>Instagram data importer</source>
+			</trans-unit>
+			<trans-unit id="task.description">
+				<source>Imports data from instagram</source>
+			</trans-unit>
+
 			<trans-unit id="tx_instagramimporter_domain_model_accesstoken">
 				<source>Access Token</source>
 			</trans-unit>
